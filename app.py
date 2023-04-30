@@ -1,12 +1,16 @@
 from flask import Flask, jsonify, make_response, request
 from flask_mongoengine import MongoEngine
+from flask_cors import CORS
+from flask_cors import cross_origin
+
 from mongoengine import SequenceField
 import config
-password=config.mongopass
+password = config.mongopass
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 database_name = "foodBlog"
-DB_URI = "mongodb+srv://vkvikashkumar987:{}@cluster0.ncpjepi.mongodb.net/{}?retryWrites=true&w=majority".format(password,
-    database_name)
+DB_URI = "mongodb+srv://vkvikashkumar987:{}@cluster0.ncpjepi.mongodb.net/{}?retryWrites=true&w=majority".format(
+    password, database_name)
 print(DB_URI)
 app.config["MONGODB_HOST"] = DB_URI
 
@@ -60,7 +64,7 @@ class User(db.Document):
         }
 
 
-@app.route("/api/createUser", methods=['POST'])
+@app.route("/createUser", methods=['POST'])
 def db_createUser():
     name = request.json.get("name")
     gender = request.json.get("gender")
@@ -75,10 +79,13 @@ def db_createUser():
     user = User(user_id=user_id, name=name, gender=gender)
     user.save()
 
-    return make_response(jsonify(message="User created"), 201)
+    return make_response(jsonify(message="User created", user_id=user_id), 201)
 
-@app.route("/api/addFoodIDs/<int:user_id>", methods=['PATCH'])
+
+@app.route("/addFoodIDs/<int:user_id>", methods=['PATCH'])
+# @cross_origin(supports_credentials=True)
 def db_addFoodIDs(user_id):
+
     food_ids = request.json.get("food_ids")
 
     if not food_ids:
@@ -95,9 +102,9 @@ def db_addFoodIDs(user_id):
             cuisineType=food_id['cuisineType'],
             mealType=food_id['mealType'],
             dietaryRestriction=food_id['dietaryRestriction'],
-            views=food_id['views'],
-            comment=food_id['comment'],
-            shared=food_id['shared'],
+          #   views=food_id['views'],
+          #   comment=food_id['comment'],
+          #   shared=food_id['shared'],
 
         )
         user.food_ids.append(food_item)
@@ -106,7 +113,8 @@ def db_addFoodIDs(user_id):
 
     return make_response(jsonify(message="Food IDs added to the user"), 200)
 
-@app.route("/api/getAllFoodIDs", methods=['GET'])
+
+@app.route("/getAllFoodIDs", methods=['GET'])
 def db_getAllFoodIDs():
     users = User.objects()
     food_data = []
@@ -114,6 +122,7 @@ def db_getAllFoodIDs():
         for food_item in user.food_ids:
             food_data.append(food_item.to_json())
     return jsonify(food_data)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
