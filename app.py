@@ -102,9 +102,7 @@ def db_addFoodIDs(user_id):
             cuisineType=food_id['cuisineType'],
             mealType=food_id['mealType'],
             dietaryRestriction=food_id['dietaryRestriction'],
-          #   views=food_id['views'],
-          #   comment=food_id['comment'],
-          #   shared=food_id['shared'],
+
 
         )
         user.food_ids.append(food_item)
