@@ -53,6 +53,7 @@ class User(db.Document):
     user_id = db.IntField(required=True, unique=True)
     name = db.StringField(required=True)
     gender = db.StringField(required=True)
+    email = db.EmailField(required=True, unique=True)
     food_ids = db.EmbeddedDocumentListField(FoodItem)
 
     def to_json(self):
@@ -60,6 +61,7 @@ class User(db.Document):
             "user_id": self.user_id,
             "name": self.name,
             "gender": self.gender,
+            "email": self.email,
             "food_ids": [food_item.to_json() for food_item in self.food_ids]
         }
 
@@ -68,6 +70,11 @@ class User(db.Document):
 def db_createUser():
     name = request.json.get("name")
     gender = request.json.get("gender")
+    email = request.json.get("email")
+
+    user = User.objects(email=email).first()
+    if user:
+        return make_response(jsonify(message="User already exists", user_id=user.user_id), 200)
 
     # Find the highest user_id in the database and increment it by 1
     highest_user = User.objects.order_by('-user_id').first()
@@ -76,23 +83,24 @@ def db_createUser():
     else:
         user_id = highest_user.user_id + 1
 
-    user = User(user_id=user_id, name=name, gender=gender)
+    user = User(user_id=user_id, name=name, gender=gender, email=email)
     user.save()
 
     return make_response(jsonify(message="User created", user_id=user_id), 201)
 
-
-@app.route("/addFoodIDs/<int:user_id>", methods=['PATCH'])
+@app.route("/addFoodIDs/<string:email_id>", methods=['PATCH'])
 # @cross_origin(supports_credentials=True)
-def db_addFoodIDs(user_id):
+def db_addFoodIDs(email_id):
 
     food_ids = request.json.get("food_ids")
 
     if not food_ids:
         return make_response(jsonify(message="No food_ids provided"), 400)
-    user = User.objects(user_id=user_id).first()
+
+    user = User.objects(email=email_id).first()
     if not user:
         return make_response(jsonify(message="User not found"), 404)
+
     for food_id in food_ids:
         food_item = FoodItem(
             title=food_id['title'],
@@ -102,8 +110,6 @@ def db_addFoodIDs(user_id):
             cuisineType=food_id['cuisineType'],
             mealType=food_id['mealType'],
             dietaryRestriction=food_id['dietaryRestriction'],
-
-
         )
         user.food_ids.append(food_item)
 
@@ -111,6 +117,34 @@ def db_addFoodIDs(user_id):
 
     return make_response(jsonify(message="Food IDs added to the user"), 200)
 
+
+
+@app.route("/getFoodItems/<string:email_id>", methods=['GET'])
+def db_getFoodItems(email_id):
+    
+    user = User.objects(email=email_id).first()
+    if not user:
+        return make_response(jsonify(message="User not found"), 404)
+    
+    food_items = user.food_ids
+    
+    if not food_items:
+        return make_response(jsonify(message="No food items found"), 404)
+    
+    food_item_list = []
+    for item in food_items:
+        food_item = {
+            'title': item.title,
+            'photo': item.photo,
+            'recipe': item.recipe,
+            'ingredient': item.ingredient,
+            'cuisineType': item.cuisineType,
+            'mealType': item.mealType,
+            'dietaryRestriction': item.dietaryRestriction
+        }
+        food_item_list.append(food_item)
+    
+    return make_response(jsonify(food_items=food_item_list), 200)
 
 @app.route("/getAllFoodIDs", methods=['GET'])
 def db_getAllFoodIDs():
